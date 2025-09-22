@@ -100,3 +100,5 @@ Refer to [Benchmark](https://langgenius.github.io/dify-plugin-daemon/benchmark-d
 ## LICENSE
 
 Dify Plugin Daemon is released under the [Apache-2.0 license](LICENSE).
+
+编译：go build -o dify-plugin-daemon cmd/server/main.go

@@ -77,6 +77,9 @@ func initOSS(config *app.Config) oss.OSS {
 }
 
 func (app *App) Run(config *app.Config) {
+	// 设置应用配置
+	app.SetConfig(config)
+
 	// init routine pool
 	if config.SentryEnabled {
 		routine.InitPool(config.RoutinePoolSize, sentry.ClientOptions{

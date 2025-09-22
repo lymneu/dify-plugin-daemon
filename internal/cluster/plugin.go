@@ -1,8 +1,6 @@
 package cluster
 
 import (
-	"errors"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -19,69 +17,6 @@ type pluginLifeTime struct {
 type pluginState struct {
 	plugin_entities.PluginRuntimeState
 	Identity string `json:"identity"`
-}
-
-// RegisterPlugin registers a plugin to the cluster, and start to be scheduled
-func (c *Cluster) RegisterPlugin(lifetime plugin_entities.PluginLifetime) error {
-	identity, err := lifetime.Identity()
-	if err != nil {
-		return err
-	}
-
-	if c.showLog {
-		log.Info("registering plugin %s", identity.String())
-	}
-
-	if c.plugins.Exists(identity.String()) {
-		return errors.New("plugin has been registered")
-	}
-
-	l := &pluginLifeTime{
-		lifetime: lifetime,
-	}
-
-	lifetime.OnStop(func() {
-		c.pluginLock.Lock()
-		c.plugins.Delete(identity.String())
-		// remove plugin state
-		c.doPluginStateUpdate(l)
-		c.pluginLock.Unlock()
-	})
-
-	c.pluginLock.Lock()
-	if !lifetime.Stopped() {
-		c.plugins.Store(identity.String(), l)
-
-		// do plugin state update immediately
-		err = c.doPluginStateUpdate(l)
-		if err != nil {
-			c.pluginLock.Unlock()
-			return err
-		}
-	}
-	c.pluginLock.Unlock()
-
-	if c.showLog {
-		log.Info("start to schedule plugin %s", identity)
-	}
-
-	return nil
-}
-
-const (
-	PLUGIN_STATE_MAP_KEY = "plugin_state"
-)
-
-func (c *Cluster) getPluginStateKey(nodeId string, plugin_id string) string {
-	return nodeId + ":" + plugin_id
-}
-
-func (c *Cluster) getScanPluginsByNodeKey(nodeId string) string {
-	return nodeId + ":*"
-}
-
-func (c *Cluster) getScanPluginsByIdKey(plugin_id string) string {
-	return "*:" + plugin_id
 }
 
 // SchedulePlugin schedules a plugin to the cluster
@@ -240,15 +175,6 @@ func (c *Cluster) isPluginActive(state *pluginState) bool {
 	return true
 }
 
-func (c *Cluster) splitNodePluginJoin(node_plugin_join string) (nodeId string, plugin_hashed_id string, err error) {
-	split := strings.Split(node_plugin_join, ":")
-	if len(split) != 2 {
-		return "", "", errors.New("invalid node_plugin_join")
-	}
-
-	return split[0], split[1], nil
-}
-
 // autoGCPlugins will automatically garbage collect the plugins that are no longer active
 func (c *Cluster) autoGCPlugins() error {
 	// skip if already in auto gc
@@ -284,17 +210,4 @@ func (c *Cluster) autoGCPlugins() error {
 			return nil
 		},
 	)
-}
-
-func (c *Cluster) IsPluginOnCurrentNode(identity plugin_entities.PluginUniqueIdentifier) (bool, error) {
-	_, ok := c.plugins.Load(identity.String())
-	if !ok {
-		_, err := c.manager.Get(identity)
-		if err != nil {
-			return false, err
-		} else {
-			return true, nil
-		}
-	}
-	return ok, nil
 }

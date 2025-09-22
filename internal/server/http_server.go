@@ -96,7 +96,7 @@ func (app *App) pluginGroup(group *gin.RouterGroup, config *app.Config) {
 func (app *App) pluginDispatchGroup(group *gin.RouterGroup, config *app.Config) {
 	group.Use(controllers.CollectActiveDispatchRequests())
 	group.Use(app.FetchPluginInstallation())
-	group.Use(app.RedirectPluginInvoke())
+	group.Use(app.DistributedPluginInvoke())
 	group.Use(app.InitClusterID())
 
 	group.POST("/agent_strategy/invoke", controllers.InvokeAgentStrategy(config))

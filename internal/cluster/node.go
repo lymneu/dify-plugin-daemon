@@ -14,6 +14,11 @@ import (
 	"github.com/langgenius/dify-plugin-daemon/pkg/entities/plugin_entities"
 )
 
+const (
+	CLUSTER_STATUS_HASH_MAP_KEY = "cluster-nodes-status-hash-map"
+	PLUGIN_STATE_MAP_KEY = "plugin_state"
+)
+
 // update the status of the node
 func (c *Cluster) updateNodeStatus() error {
 	c.notifyNodeUpdate()
@@ -133,11 +138,6 @@ func (c *Cluster) FetchPluginAvailableNodesByHashedId(hashedPluginId string) ([]
 	}
 
 	return nodes, nil
-}
-
-func (c *Cluster) FetchPluginAvailableNodesById(plugin_id string) ([]string, error) {
-	hashedPluginId := plugin_entities.HashedIdentity(plugin_id)
-	return c.FetchPluginAvailableNodesByHashedId(hashedPluginId)
 }
 
 func (c *Cluster) IsMaster() bool {

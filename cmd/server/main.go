@@ -19,6 +19,14 @@ func main() {
 		log.Panic("Error processing environment variables: %s", err.Error())
 	}
 
+	// 手动加载水平扩展配置
+	var horizontalScalingConfig app.HorizontalScalingConfig
+	err = envconfig.Process("", &horizontalScalingConfig)
+	if err != nil {
+		log.Panic("Error processing horizontal scaling environment variables: %s", err.Error())
+	}
+	config.HorizontalScaling = &horizontalScalingConfig
+
 	config.SetDefault()
 
 	if err := config.Validate(); err != nil {

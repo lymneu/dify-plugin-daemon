@@ -28,7 +28,6 @@ import (
 //
 
 const (
-	CLUSTER_STATUS_HASH_MAP_KEY = "cluster-nodes-status-hash-map"
 	PREEMPTION_LOCK_KEY         = "cluster-master-preemption-lock"
 )
 
