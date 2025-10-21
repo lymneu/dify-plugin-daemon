@@ -213,6 +213,8 @@ func (app *App) AdminAPIKey(key string) gin.HandlerFunc {
 
 // handleDistributedPluginInvoke 处理分布式插件调用
 func (app *App) handleDistributedPluginInvoke(ctx *gin.Context, identity plugin_entities.PluginUniqueIdentifier) bool {
+	log.Info("Handling distributed plugin invoke for plugin: %s", identity.String())
+	
 	// 获取负载均衡器
 	loadBalancer := app.cluster.GetLoadBalancer()
 	if loadBalancer == nil {
@@ -234,6 +236,8 @@ func (app *App) handleDistributedPluginInvoke(ctx *gin.Context, identity plugin_
 		)
 		return false
 	}
+	
+	log.Info("Selected node for plugin %s: %s", identity.String(), selectedNode)
 
 	// 检查是否选择了当前节点
 	currentNodeID := app.cluster.ID()
@@ -253,6 +257,7 @@ func (app *App) handleDistributedPluginInvoke(ctx *gin.Context, identity plugin_
 	}
 
 	// 转发请求到选定节点
+	log.Info("About to redirect request. Method: %s, URL: %s", ctx.Request.Method, ctx.Request.URL.String())
 	statusCode, header, body, err := app.cluster.RedirectRequest(selectedNode, ctx.Request)
 	if err != nil {
 		log.Error("Failed to forward request to node %s: %s", selectedNode, err.Error())
@@ -264,6 +269,8 @@ func (app *App) handleDistributedPluginInvoke(ctx *gin.Context, identity plugin_
 		)
 		return false
 	}
+	
+	log.Info("Received response from redirected node. Status code: %d", statusCode)
 
 	// 更新节点健康状态
 	loadBalancer.UpdateNodeHealth(selectedNode, true)
@@ -275,16 +282,27 @@ func (app *App) handleDistributedPluginInvoke(ctx *gin.Context, identity plugin_
 			ctx.Writer.Header().Set(key, value)
 		}
 	}
+	
+	// 记录响应头信息
+	log.Info("Response headers:")
+	for key, values := range header {
+		log.Info("  %s: %v", key, values)
+	}
 
 	// 流式传输响应体
+	log.Info("Streaming response body...")
 	for {
 		buf := make([]byte, 1024)
 		n, err := body.Read(buf)
 		if err != nil && err != io.EOF {
+			log.Error("Error reading response body: %v", err)
 			break
 		} else if err != nil {
-			ctx.Writer.Write(buf[:n])
-			ctx.Writer.Flush()
+			if n > 0 {
+				ctx.Writer.Write(buf[:n])
+				ctx.Writer.Flush()
+			}
+			log.Info("Finished streaming response body")
 			break
 		}
 

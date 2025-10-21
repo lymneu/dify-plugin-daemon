@@ -58,13 +58,19 @@ func NewDistributedLoadBalancer(config *app.HorizontalScalingConfig, pluginState
 
 // SelectNode 选择最佳节点处理请求
 func (dlb *DistributedLoadBalancer) SelectNode(pluginUniqueIdentifier string, excludeNodes []string) (string, error) {
+	log.Info("Selecting node for plugin: %s", pluginUniqueIdentifier)
+	
 	// 首先查找有该插件的节点
 	availableNodes, err := dlb.pluginStateManager.FindAvailableNodesForPlugin(pluginUniqueIdentifier)
 	if err != nil {
+		log.Error("Failed to find available nodes: %v", err)
 		return "", fmt.Errorf("failed to find available nodes: %w", err)
 	}
 
+	log.Info("Available nodes for plugin %s: %v", pluginUniqueIdentifier, availableNodes)
+	
 	if len(availableNodes) == 0 {
+		log.Error("No available nodes found for plugin: %s", pluginUniqueIdentifier)
 		return "", errors.New("no available nodes found for plugin")
 	}
 
@@ -80,26 +86,43 @@ func (dlb *DistributedLoadBalancer) SelectNode(pluginUniqueIdentifier string, ex
 			// 检查节点健康状态
 			if info := dlb.getNodeInfo(nodeID); info != nil && info.IsHealthy {
 				filteredNodes = append(filteredNodes, nodeID)
+				log.Info("Node %s is healthy and available", nodeID)
+			} else {
+				log.Info("Node %s is not healthy or not available", nodeID)
 			}
 		}
 	}
 
+	log.Info("Filtered healthy nodes: %v", filteredNodes)
+	
 	if len(filteredNodes) == 0 {
+		log.Error("No healthy nodes available for plugin: %s", pluginUniqueIdentifier)
 		return "", errors.New("no healthy nodes available")
 	}
 
 	// 根据策略选择节点
+	log.Info("Load balancing strategy: %s", dlb.strategy)
 	switch dlb.strategy {
 	case app.LoadBalancingRoundRobin:
-		return dlb.selectRoundRobin(filteredNodes), nil
+		selected := dlb.selectRoundRobin(filteredNodes)
+		log.Info("Selected node using round-robin: %s", selected)
+		return selected, nil
 	case app.LoadBalancingLeastConnections:
-		return dlb.selectLeastConnections(filteredNodes), nil
+		selected := dlb.selectLeastConnections(filteredNodes)
+		log.Info("Selected node using least connections: %s", selected)
+		return selected, nil
 	case app.LoadBalancingRandom:
-		return dlb.selectRandom(filteredNodes), nil
+		selected := dlb.selectRandom(filteredNodes)
+		log.Info("Selected node using random: %s", selected)
+		return selected, nil
 	case app.LoadBalancingWeightedRandom:
-		return dlb.selectWeightedRandom(filteredNodes), nil
+		selected := dlb.selectWeightedRandom(filteredNodes)
+		log.Info("Selected node using weighted random: %s", selected)
+		return selected, nil
 	default:
-		return dlb.selectRoundRobin(filteredNodes), nil
+		selected := dlb.selectRoundRobin(filteredNodes)
+		log.Info("Selected node using default round-robin: %s", selected)
+		return selected, nil
 	}
 }
 

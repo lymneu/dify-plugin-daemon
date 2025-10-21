@@ -280,6 +280,7 @@ func (dpsm *DistributedPluginStateManager) FindAvailableNodesForPlugin(pluginUni
 				parsedIdentifier := identifier
 				// 尝试解析JSON字符串
 				if err := json.Unmarshal([]byte(identifier), &parsedIdentifier); err == nil {
+					log.Info("  Parsed identifier: %s", parsedIdentifier)
 					if parsedIdentifier == pluginUniqueIdentifier {
 						log.Info("Found matching plugin on node: %s", nodeID)
 						availableNodes = append(availableNodes, nodeID)
@@ -287,6 +288,7 @@ func (dpsm *DistributedPluginStateManager) FindAvailableNodesForPlugin(pluginUni
 					}
 				} else {
 					// 如果解析失败，直接比较原始值
+					log.Info("  Failed to parse identifier as JSON, comparing raw values")
 					if identifier == pluginUniqueIdentifier {
 						log.Info("Found matching plugin on node: %s", nodeID)
 						availableNodes = append(availableNodes, nodeID)
