@@ -275,10 +275,22 @@ func (dpsm *DistributedPluginStateManager) FindAvailableNodesForPlugin(pluginUni
 			// 检查是否有目标插件
 			for pluginID, identifier := range pluginMap {
 				log.Info("  Plugin: %s -> %s", pluginID, identifier)
-				if identifier == pluginUniqueIdentifier {
-					log.Info("Found matching plugin on node: %s", nodeID)
-					availableNodes = append(availableNodes, nodeID)
-					break
+				// 注意：identifier是JSON字符串，需要解析后再比较
+				parsedIdentifier := identifier
+				// 尝试解析JSON字符串
+				if err := json.Unmarshal([]byte(identifier), &parsedIdentifier); err == nil {
+					if parsedIdentifier == pluginUniqueIdentifier {
+						log.Info("Found matching plugin on node: %s", nodeID)
+						availableNodes = append(availableNodes, nodeID)
+						break
+					}
+				} else {
+					// 如果解析失败，直接比较原始值
+					if identifier == pluginUniqueIdentifier {
+						log.Info("Found matching plugin on node: %s", nodeID)
+						availableNodes = append(availableNodes, nodeID)
+						break
+					}
 				}
 			}
 		}

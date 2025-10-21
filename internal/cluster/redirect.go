@@ -4,10 +4,25 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func constructRedirectUrl(ip address, request *http.Request) string {
-	url := "http://" + ip.fullAddress() + request.URL.Path
+	// 确保路径以/e开头，这是API端点的基础路径
+	basePath := "/e"
+	path := request.URL.Path
+	
+	// 如果请求路径不以/e开头，需要添加/e前缀
+	if !strings.HasPrefix(path, basePath) {
+		if strings.HasPrefix(path, "/plugin/") {
+			// 对于/plugin/路径，保持原样
+		} else {
+			// 对于其他路径，添加/e前缀
+			path = basePath + path
+		}
+	}
+	
+	url := "http://" + ip.fullAddress() + path
 	if request.URL.RawQuery != "" {
 		url += "?" + request.URL.RawQuery
 	}
