@@ -49,6 +49,11 @@ type LocalPluginRuntime struct {
 	stdioHolder *stdioHolder
 }
 
+// GetStdioHolder 获取stdioHolder，用于检查插件运行时是否正确初始化
+func (r *LocalPluginRuntime) GetStdioHolder() interface{} {
+	return r.stdioHolder
+}
+
 type LocalPluginRuntimeConfig struct {
 	PythonInterpreterPath     string
 	UvPath                    string

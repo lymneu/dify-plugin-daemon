@@ -367,7 +367,13 @@ func (c *Cluster) IsPluginOnCurrentNode(uniqueIdentifier plugin_entities.PluginU
 	c.pluginLock.RUnlock()
 	
 	if existsLocally {
-		return true, nil
+		// 检查插件是否真正可用（不仅在本地注册，而且正确初始化了运行时）
+		if c.isPluginReallyAvailable(uniqueIdentifier) {
+			return true, nil
+		}
+		// 如果插件在本地注册但没有正确初始化，返回false
+		log.Warn("Plugin %s is registered locally but not really available", uniqueIdentifier.String())
+		return false, nil
 	}
 
 	// 检查分布式状态
@@ -382,7 +388,13 @@ func (c *Cluster) IsPluginOnCurrentNode(uniqueIdentifier plugin_entities.PluginU
 			continue
 		}
 		if state.PluginUniqueIdentifier == uniqueIdentifier.String() {
-			return true, nil
+			// 检查插件是否真正可用
+			if c.isPluginReallyAvailable(uniqueIdentifier) {
+				return true, nil
+			}
+			// 如果插件在分布式状态中注册但没有正确初始化，返回false
+			log.Warn("Plugin %s is registered in distributed state but not really available", uniqueIdentifier.String())
+			return false, nil
 		}
 	}
 
@@ -494,4 +506,38 @@ func (c *Cluster) splitNodePluginJoin(node_plugin_join string) (nodeId string, p
 		return "", "", errors.New("invalid node_plugin_join")
 	}
 	return split[0], split[1], nil
+}
+
+// isPluginReallyAvailable 检查插件是否真正可用（不仅在分布式状态中注册，而且在当前节点上正确初始化了运行时）
+func (c *Cluster) isPluginReallyAvailable(uniqueIdentifier plugin_entities.PluginUniqueIdentifier) bool {
+	// 先检查本地plugins map中是否存在该插件
+	c.pluginLock.RLock()
+	pluginLifetime, existsLocally := c.plugins.Load(uniqueIdentifier.String())
+	c.pluginLock.RUnlock()
+	
+	if !existsLocally {
+		log.Debug("Plugin %s not found in local plugins map", uniqueIdentifier.String())
+		return false
+	}
+	
+	// 检查插件运行时是否正确初始化
+	if pluginLifetime == nil {
+		log.Debug("Plugin %s lifetime is nil", uniqueIdentifier.String())
+		return false
+	}
+	
+	// 检查插件是否处于活跃状态
+	if pluginLifetime.lifetime == nil {
+		log.Debug("Plugin %s lifetime.lifetime is nil", uniqueIdentifier.String())
+		return false
+	}
+	
+	if pluginLifetime.lifetime.Stopped() {
+		log.Debug("Plugin %s is stopped", uniqueIdentifier.String())
+		return false
+	}
+	
+	// 简化检查，只验证插件是否处于活跃状态
+	log.Debug("Plugin %s is really available", uniqueIdentifier.String())
+	return true
 }
