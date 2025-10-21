@@ -3,6 +3,7 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -288,6 +289,18 @@ func (dpsm *DistributedPluginStateManager) FindAvailableNodesForPlugin(pluginUni
 					// 如果解析失败，直接比较原始值
 					if identifier == pluginUniqueIdentifier {
 						log.Info("Found matching plugin on node: %s", nodeID)
+						availableNodes = append(availableNodes, nodeID)
+						break
+					}
+				}
+				
+				// 特殊处理：检查是否是包含节点ID的pluginID格式
+				// 在RegisterPlugin中，我们使用了pluginIDWithNode := fmt.Sprintf("%s@%s", identity.String(), c.id)
+				// 所以这里也要检查这种格式
+				if strings.Contains(pluginID, "@") {
+					parts := strings.Split(pluginID, "@")
+					if len(parts) == 2 && parts[0] == pluginUniqueIdentifier {
+						log.Info("Found matching plugin with node info on node: %s", nodeID)
 						availableNodes = append(availableNodes, nodeID)
 						break
 					}

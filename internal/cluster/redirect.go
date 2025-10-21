@@ -8,20 +8,19 @@ import (
 )
 
 func constructRedirectUrl(ip address, request *http.Request) string {
-	// 确保路径以/e开头，这是API端点的基础路径
-	basePath := "/e"
+	// 获取原始路径
 	path := request.URL.Path
 	
-	// 如果请求路径不以/e开头，需要添加/e前缀
-	if !strings.HasPrefix(path, basePath) {
-		if strings.HasPrefix(path, "/plugin/") {
-			// 对于/plugin/路径，保持原样
-		} else {
-			// 对于其他路径，添加/e前缀
-			path = basePath + path
+	// 检查路径是否已经包含正确的前缀
+	if !strings.HasPrefix(path, "/e/") && !strings.HasPrefix(path, "/plugin/") {
+		// 如果路径不以/e或/plugin开头，需要添加/e前缀
+		// 但要确保不重复添加
+		if !strings.HasPrefix(path, "/e") {
+			path = "/e" + path
 		}
 	}
 	
+	// 构建完整的URL
 	url := "http://" + ip.fullAddress() + path
 	if request.URL.RawQuery != "" {
 		url += "?" + request.URL.RawQuery
