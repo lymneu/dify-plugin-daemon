@@ -13,7 +13,7 @@ import (
  and what we need is actually a way to launch plugins locally
 
  It makes things easier, the command should be `run`, instead of `test`, user could use `dify plugin run <plugin_id>`
- to launch and test it through stdin/stdout
+ to launch and test it through stdin/stdou
 */
 
 var (

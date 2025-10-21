@@ -9,6 +9,17 @@ import (
 )
 
 func (r *LocalPluginRuntime) Listen(session_id string) *entities.Broadcast[plugin_entities.SessionMessage] {
+	// 添加对stdioHolder的空值检查
+	if r.stdioHolder == nil {
+		log.Error("stdioHolder is nil when listening for session %s, plugin: %s", session_id, r.Config.Identity())
+		// 返回一个空的Broadcast对象而不是nil，避免上层调用出现空指针异常
+		emptyBroadcast := entities.NewBroadcast[plugin_entities.SessionMessage]()
+		emptyBroadcast.OnClose(func() {
+			log.Warn("Closing empty broadcast for session %s", session_id)
+		})
+		return emptyBroadcast
+	}
+	
 	listener := entities.NewBroadcast[plugin_entities.SessionMessage]()
 	listener.OnClose(func() {
 		r.stdioHolder.removeStdioHandlerListener(session_id)
@@ -27,5 +38,11 @@ func (r *LocalPluginRuntime) Listen(session_id string) *entities.Broadcast[plugi
 }
 
 func (r *LocalPluginRuntime) Write(session_id string, action access_types.PluginAccessAction, data []byte) {
+	// 添加对stdioHolder的空值检查
+	if r.stdioHolder == nil {
+		log.Error("stdioHolder is nil when writing for session %s, plugin: %s", session_id, r.Config.Identity())
+		return
+	}
+	
 	r.stdioHolder.write(append(data, '\n'))
 }

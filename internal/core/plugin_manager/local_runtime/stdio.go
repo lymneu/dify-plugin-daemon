@@ -82,6 +82,17 @@ func newStdioHolder(
 }
 
 func (s *stdioHolder) setupStdioEventListener(session_id string, listener func([]byte)) {
+	// 添加对stdioHolder和锁的空值检查
+	if s == nil {
+		log.Error("stdioHolder is nil when setting up stdio event listener")
+		return
+	}
+	
+	if s.l == nil {
+		log.Error("stdioHolder lock is nil when setting up stdio event listener")
+		return
+	}
+	
 	s.l.Lock()
 	defer s.l.Unlock()
 	if s.listener == nil {
@@ -92,17 +103,45 @@ func (s *stdioHolder) setupStdioEventListener(session_id string, listener func([
 }
 
 func (s *stdioHolder) removeStdioHandlerListener(session_id string) {
+	// 添加对stdioHolder和锁的空值检查
+	if s == nil {
+		log.Error("stdioHolder is nil when removing stdio handler listener")
+		return
+	}
+	
+	if s.l == nil {
+		log.Error("stdioHolder lock is nil when removing stdio handler listener")
+		return
+	}
+	
 	s.l.Lock()
 	defer s.l.Unlock()
 	delete(s.listener, session_id)
 }
 
 func (s *stdioHolder) write(data []byte) error {
+	// 添加对stdioHolder的空值检查
+	if s == nil {
+		log.Error("stdioHolder is nil when writing data")
+		return errors.New("stdioHolder is nil")
+	}
+	
+	if s.writer == nil {
+		log.Error("stdioHolder writer is nil when writing data")
+		return errors.New("stdioHolder writer is nil")
+	}
+	
 	_, err := s.writer.Write(data)
 	return err
 }
 
 func (s *stdioHolder) Error() error {
+	// 添加对stdioHolder的空值检查
+	if s == nil {
+		log.Error("stdioHolder is nil when getting error")
+		return errors.New("stdioHolder is nil")
+	}
+	
 	if time.Since(s.lastErrMessageUpdatedAt) < 60*time.Second {
 		if s.errMessage != "" {
 			return errors.New(s.errMessage)
@@ -115,9 +154,21 @@ func (s *stdioHolder) Error() error {
 // Stop stops the stdio, of course, it will shutdown the plugin asynchronously
 // by closing a channel to notify the `Wait()` function to exit
 func (s *stdioHolder) Stop() {
-	s.writer.Close()
-	s.reader.Close()
-	s.errReader.Close()
+	// 添加对stdioHolder的空值检查
+	if s == nil {
+		log.Error("stdioHolder is nil when stopping")
+		return
+	}
+	
+	if s.writer != nil {
+		s.writer.Close()
+	}
+	if s.reader != nil {
+		s.reader.Close()
+	}
+	if s.errReader != nil {
+		s.errReader.Close()
+	}
 
 	s.waitControllerChanLock.Lock()
 	if !s.waitingControllerChanClosed {
@@ -131,6 +182,17 @@ func (s *stdioHolder) Stop() {
 // it will notify the heartbeat function when the plugin is active
 // and parse the stdout data to trigger corresponding listeners
 func (s *stdioHolder) StartStdout(notify_heartbeat func()) {
+	// 添加对stdioHolder和锁的空值检查
+	if s == nil {
+		log.Error("stdioHolder is nil when starting stdout")
+		return
+	}
+	
+	if s.l == nil {
+		log.Error("stdioHolder lock is nil when starting stdout")
+		return
+	}
+	
 	s.started = true
 	s.lastActiveAt = time.Now()
 	defer s.Stop()
@@ -183,6 +245,12 @@ func (s *stdioHolder) StartStdout(notify_heartbeat func()) {
 // WriteError writes the error message to the stdio holder
 // it will keep the last 1024 bytes of the error message
 func (s *stdioHolder) WriteError(msg string) {
+	// 添加对stdioHolder的空值检查
+	if s == nil {
+		log.Error("stdioHolder is nil when writing error message")
+		return
+	}
+	
 	if len(msg) > MAX_ERR_MSG_LEN {
 		msg = msg[:MAX_ERR_MSG_LEN]
 	}
@@ -203,6 +271,17 @@ func (s *stdioHolder) WriteError(msg string) {
 // StartStderr starts to read the stderr of the plugin
 // it will write the error message to the stdio holder
 func (s *stdioHolder) StartStderr() {
+	// 添加对stdioHolder的空值检查
+	if s == nil {
+		log.Error("stdioHolder is nil when starting stderr")
+		return
+	}
+	
+	if s.errReader == nil {
+		log.Error("stdioHolder errReader is nil when starting stderr")
+		return
+	}
+	
 	for {
 		buf := make([]byte, 1024)
 		n, err := s.errReader.Read(buf)
@@ -223,6 +302,12 @@ func (s *stdioHolder) StartStderr() {
 // it will return an error if the plugin is not active
 // you can also call `Stop()` to stop the waiting process
 func (s *stdioHolder) Wait() error {
+	// 添加对stdioHolder的空值检查
+	if s == nil {
+		log.Error("stdioHolder is nil when waiting")
+		return errors.New("stdioHolder is nil")
+	}
+	
 	s.waitControllerChanLock.Lock()
 	if s.waitingControllerChanClosed {
 		s.waitControllerChanLock.Unlock()
